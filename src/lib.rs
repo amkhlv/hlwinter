@@ -100,7 +100,7 @@ pub fn get_wm_data() -> (
         .expect("Expected JSON array")
         .iter()
         .filter_map(|client| {
-            let address = client["address"].as_str()?.to_string();
+            let address = client["address"].as_u64()?;
             let workspace_id = client["workspace"]["id"].as_u64()? as u32;
             let title = client["title"].as_str()?.to_string();
             let class = client["class"].as_str()?.to_string();

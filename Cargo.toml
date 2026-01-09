@@ -48,6 +48,9 @@ version = "1.0.219"
 [dependencies.serde-xml-rs]
 version = "0.8.1"
 
+[dependencies.serde_json]
+version = "1.0.149"
+
 [dependencies.clap]
 version = "2.33.3"
 
