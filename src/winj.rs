@@ -9,6 +9,7 @@ use glib::clone;
 use glib::signal::Propagation;
 use gtk::glib;
 use gtk::prelude::*;
+use std::process::Command;
 
 use crate::gdk::prelude::{ApplicationExt, ApplicationExtManual};
 use hlwinter::{
@@ -139,7 +140,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(aa) => {
                     app.quit();
                     if aa < 97 && aa > 48 {
-                        let new_desktop = (aa - 49) as u32;
+                        let new_desktop = (aa - 48) as u32;
+                        let _ = Command::new("hyprctl")
+                            .arg("dispatch")
+                            .arg("workspace")
+                            .arg(format!("{new_desktop}"))
+                            .spawn();
                         return Propagation::Stop;
                     } else  if let Some(s) = &hints.get(&(aa - 97)) {
                         go_to_window(**s);

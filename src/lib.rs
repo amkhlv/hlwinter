@@ -98,7 +98,6 @@ pub fn get_wm_data() -> (
 
     // Parse the JSON
     let clients: Value = serde_json::from_str(&json_str).expect("Failed to parse JSON output");
-
     // Extract wins (address, workspace.id, title, class)
     let wins = clients
         .as_array()
@@ -113,9 +112,33 @@ pub fn get_wm_data() -> (
             Some((address, workspace_id, title, class))
         })
         .collect::<Vec<_>>();
-    println!("Wins: {:?}", wins);
 
-    (Rc::new(wins), Rc::new("TODO".to_string()), 0, 0)
+    let output = Command::new("hyprctl")
+        .arg("-j")
+        .arg("activeworkspace")
+        .output()
+        .expect("Failed to run hyprctl command");
+    let json_str = String::from_utf8(output.stdout).expect("Failed to parse output as UTF-8");
+    let workspace: Value = serde_json::from_str(&json_str).expect("Failed to parse JSON output");
+    let cur_desktop = workspace["id"]
+        .as_u64()
+        .expect("Failed to parse workspace ID") as u32;
+
+    let output = Command::new("hyprctl")
+        .arg("-j")
+        .arg("activewindow")
+        .output()
+        .expect("Failed to run hyprctl command");
+    let json_str = String::from_utf8(output.stdout).expect("Failed to parse output as UTF-8");
+    let window: Value = serde_json::from_str(&json_str).expect("Failed to parse JSON output");
+    let cur_window = parse_hex_to_u64(window["address"].as_str().unwrap()).unwrap();
+
+    (
+        Rc::new(wins),
+        Rc::new("TODO".to_string()),
+        cur_desktop,
+        cur_window,
+    )
 }
 
 pub fn abbreviate(x: String, maxlen: usize) -> String {
@@ -194,7 +217,7 @@ pub fn make_vbox(
         let truncated = name.clone();
         let lbl = gtk::Label::new(Some(&format!(
             "{}: {}",
-            win_desktop + 1,
+            win_desktop,
             abbreviate(truncated, maxlen)
         )));
         btn.style_context()
