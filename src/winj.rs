@@ -57,10 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap()
         });
     let prev_win = match std::io::BufReader::new(&tmpfile).lines().into_iter().next() {
-        Some(Ok(x)) => match x.parse::<u32>() {
-            Ok(w) => Some(w),
-            _ => None,
-        },
+        Some(Ok(x)) => Some(x),
         _ => None,
     };
     let tmpfile = std::fs::OpenOptions::new()
@@ -114,11 +111,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         window.add(&vbox);
         let hints = Rc::new(charhints);
         let tmpfile = tmpfile.clone();
+        let pw = Rc::new(prev_win.clone());
         window.connect_key_press_event(clone!(@weak app => @default-return Propagation::Proceed, move |_w,e| {
             let keyval = e.keyval();
             let _keystate = e.state();
             if *keyval == gdk_sys::GDK_KEY_Escape as u32 {
-                match prev_win {
+                match pw.as_ref() {
                     Some(x) => { tmpfile.borrow_mut().write(&format!("{}",x).into_bytes()[..]).expect("failed writing to tmpfile")  ; () }
                     None => ()
                 }
@@ -127,9 +125,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if *keyval == gdk_sys::GDK_KEY_space as u32 {
                 app.quit();
-                match prev_win {
+                match pw.as_ref() {
                     Some(w) =>  {
-                        println!("-- previous window was {:#x}",w);
+                        println!("-- previous window was {}",w);
+                        let _ = Command::new("hyprctl")
+                            .arg("dispatch")
+                            .arg("focuswindow")
+                            .arg(format!("address:{}", w))
+                            .spawn();
+                        tmpfile.borrow_mut().write(&format!("{:#x}",active).into_bytes()[..]).expect("failed writing to tmpfile");
                     }
                     None => ()
                 }
@@ -148,6 +152,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .spawn();
                         return Propagation::Stop;
                     } else  if let Some(s) = &hints.get(&(aa - 97)) {
+                        tmpfile.borrow_mut().write(&format!("{:#x}",active).into_bytes()[..]).expect("failed writing to tmpfile");
                         go_to_window(**s);
                         return Propagation::Stop;
                     } else {
