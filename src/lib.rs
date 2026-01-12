@@ -10,6 +10,8 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
+use std::thread;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub enum WintError {
@@ -48,6 +50,13 @@ pub struct BlacklistedItems {
     pub item: Vec<BlacklistedItem>,
 }
 
+#[derive(Debug)]
+pub struct Monitor {
+    pub width: u32,
+    pub height: u32,
+    pub scale: f32,
+}
+
 #[derive(Debug, Deserialize, PartialEq)]
 pub enum TMPFile {
     #[serde(rename = "in_xdg_runtime")]
@@ -82,7 +91,7 @@ fn parse_hex_to_u64(hex_str: &str) -> Result<u64, std::num::ParseIntError> {
 }
 pub fn get_wm_data() -> (
     Rc<Vec<(Window, u32, String, String)>>,
-    Rc<String>,
+    Rc<Monitor>,
     u32,
     Window,
 ) {
@@ -103,7 +112,13 @@ pub fn get_wm_data() -> (
             let monitor = arr.get(0).expect("Expected at least one monitor");
             let width = monitor["width"].as_u64().unwrap() as u32;
             let height = monitor["height"].as_u64().unwrap() as u32;
-            (width, height)
+            let scale = monitor["scale"].as_f64().unwrap() as f32;
+            let monitor = Monitor {
+                width,
+                height,
+                scale,
+            };
+            monitor
         }
         _ => panic!("Unexpected JSON format"),
     };
@@ -181,12 +196,7 @@ pub fn get_wm_data() -> (
         0
     };
 
-    (
-        Rc::new(wins),
-        Rc::new(format!("{}x{}", geom.0, geom.1)),
-        cur_desktop,
-        cur_window,
-    )
+    (Rc::new(wins), Rc::new(geom), cur_desktop, cur_window)
 }
 
 pub fn abbreviate(x: String, maxlen: usize) -> String {
@@ -335,4 +345,13 @@ pub fn go_to_window(win: Window) {
             String::from_utf8_lossy(&jumper.stderr)
         );
     }
+
+    thread::sleep(Duration::from_millis(100));
+
+    let _ = Command::new("hyprctl")
+        .arg("dispatch")
+        .arg("alterzorder")
+        .arg(format!("top,address:0x{:x}", win))
+        .status()
+        .expect("Failed to raise window");
 }

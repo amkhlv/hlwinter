@@ -17,7 +17,8 @@ use std::thread;
 use std::time::Duration;
 
 use hlwinter::{
-    check_css, check_tilings, get_conf, get_config_dir, get_wm_data, make_vbox, Config, Window,
+    check_css, check_tilings, get_conf, get_config_dir, get_wm_data, make_vbox, Config, Monitor,
+    Window,
 };
 
 #[macro_use]
@@ -68,7 +69,7 @@ fn get_geometry(xml_path: &PathBuf, nick: String, geom: &String) -> Option<Vec<u
                 .collect()
         })
 }
-fn do_resize(wid: Window, g: &Vec<u32>) {
+fn do_resize(wid: Window, g: &Vec<u32>, geom: &Monitor) {
     println!("Resizing window address:0x{:x}", wid);
     let _ = Command::new("hyprctl")
         .arg("dispatch")
@@ -77,14 +78,18 @@ fn do_resize(wid: Window, g: &Vec<u32>) {
         .status()
         .expect("Failed to focus window");
 
-    thread::sleep(Duration::from_millis(200));
+    thread::sleep(Duration::from_millis(100));
 
     let _ = Command::new("hyprctl")
         .arg("dispatch")
         .arg("movewindowpixel")
         .arg("exact")
-        .arg(format!("{}", g[0]))
-        .arg(format!("{},address:0x{:x}", g[1], wid))
+        .arg(format!("{}", (g[0] as f32 / geom.scale).round()))
+        .arg(format!(
+            "{},address:0x{:x}",
+            (g[1] as f32 / geom.scale).round(),
+            wid
+        ))
         .status()
         .expect("Failed to move window");
 
@@ -95,15 +100,29 @@ fn do_resize(wid: Window, g: &Vec<u32>) {
         .status()
         .expect("Failed to focus window");
 
-    thread::sleep(Duration::from_millis(200));
+    thread::sleep(Duration::from_millis(100));
 
     let _ = Command::new("hyprctl")
         .arg("dispatch")
         .arg("resizewindowpixel")
         .arg("exact")
-        .arg(format!("{}", g[2]))
-        .arg(format!("{},address:0x{:x}", g[3], wid))
-        .spawn();
+        .arg(format!("{}", (g[2] as f32 / geom.scale).round()))
+        .arg(format!(
+            "{},address:0x{:x}",
+            (g[3] as f32 / geom.scale).round(),
+            wid
+        ))
+        .status()
+        .expect("Failed to resize window");
+
+    thread::sleep(Duration::from_millis(100));
+
+    let _ = Command::new("hyprctl")
+        .arg("dispatch")
+        .arg("alterzorder")
+        .arg(format!("top,address:0x{:x}", wid))
+        .status()
+        .expect("Failed to raise window");
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -178,13 +197,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let charhint = it.next().unwrap();
                 let wid = *charhints.get(&(charhint as u8 - 97 as u8)).unwrap();
                 let tiling = it.collect::<String>();
-                let mg = get_geometry(&xml_path, tiling, &geom1);
+                let mg = get_geometry(&xml_path, tiling, &format!("{}x{}", geom1.width, geom1.height));
                 return (wid, mg)
             }).collect();
             app.quit();
             for (wid, mg) in tilings.iter() {
                 match mg {
-                    Some(g) => do_resize(*wid, &g),
+                    Some(g) => do_resize(*wid, &g, &geom1),
                     None => ()
                 }
             }
