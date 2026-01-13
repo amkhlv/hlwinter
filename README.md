@@ -3,7 +3,7 @@ Description
 
 "Mouseless navigation". Keyboard navigation and window tiling for [Hyprland](https://hypr.land/).
 
-A dropdown replacement of [winterreise](https://github.com/amkhlv/winterreise).
+A drop-in replacement of [winterreise](https://github.com/amkhlv/winterreise).
 
 `Hlwinter` installs two programs, `wint` and `winj`.
 
