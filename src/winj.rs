@@ -12,7 +12,7 @@ use gtk::prelude::*;
 use std::process::Command;
 
 use crate::gdk::prelude::{ApplicationExt, ApplicationExtManual};
-use hlwinter::{
+use hyprwinter::{
     check_css, check_tilings, get_conf, get_config_dir, get_wm_data, go_to_window, make_vbox,
     Config, TMPFile,
 };

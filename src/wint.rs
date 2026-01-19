@@ -16,7 +16,7 @@ use std::rc::Rc;
 use std::thread;
 use std::time::Duration;
 
-use hlwinter::{
+use hyprwinter::{
     check_css, check_tilings, get_conf, get_config_dir, get_wm_data, make_vbox, Config, Monitor,
     Window,
 };
@@ -52,25 +52,26 @@ struct Displays {
 
 fn get_geometry(xml_path: &PathBuf, nick: String, geom: &String) -> Option<Vec<u32>> {
     let tilings: Displays = serde_xml_rs::from_reader(File::open(xml_path).unwrap()).unwrap();
-    let x = tilings
+    tilings
         .items
         .iter()
         .filter(|disp| &disp.resolution == geom)
         .next()
-        .unwrap();
-    x.windows
-        .iter()
-        .filter(|w| w.nick == nick)
-        .next()
-        .map(|ni| {
-            ni.geometry
-                .split(",")
-                .map(|s| str::parse::<u32>(s).unwrap())
-                .collect()
+        .and_then(|x| {
+            x.windows
+                .iter()
+                .filter(|w| w.nick == nick)
+                .next()
+                .map(|ni| {
+                    ni.geometry
+                        .split(",")
+                        .map(|s| str::parse::<u32>(s).unwrap())
+                        .collect()
+                })
         })
 }
 fn do_resize(wid: Window, g: &Vec<u32>, geom: &Monitor) {
-    println!("Resizing window address:0x{:x}", wid);
+    //println!("Resizing window address:0x{:x}", wid);
     let _ = Command::new("hyprctl")
         .arg("dispatch")
         .arg("focuswindow")
@@ -188,7 +189,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let entry = gtk::Entry::new();
         entry.style_context().add_class("wmjump_cmd_entry");
         let geom1 = Rc::clone(&geom);
-        println!("Geometry={:?}", geom1);
         let xml_path = Rc::clone(&xml_path);
         entry.connect_activate(clone!(@weak entry, @weak app => move |_| {
             let command : String = entry.text().to_string();
@@ -204,7 +204,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (wid, mg) in tilings.iter() {
                 match mg {
                     Some(g) => do_resize(*wid, &g, &geom1),
-                    None => ()
+                    None => println!("No geometry found for window {} at screen resolution {}", wid, format!("{}x{}", geom1.width, geom1.height))
                 }
             }
         }));
