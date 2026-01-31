@@ -5,7 +5,7 @@ Description
 
 A drop-in replacement of [winterreise](https://github.com/amkhlv/winterreise).
 
-`Hlwinter` installs two programs, `wint` and `winj`.
+`hyprwinter` installs two programs, `wint` and `winj`.
 
 The first program, `winj`, allows to use keyboard to switch between windows and workspaces. 
 It shows a menu with the colored list of windows, marked by letters a-z. 
